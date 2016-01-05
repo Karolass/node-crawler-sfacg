@@ -1,0 +1,15 @@
+{
+  "name": "scrapy-sfacg",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^0.19.0",
+    "request": "^2.61.0"
+  }
+}
