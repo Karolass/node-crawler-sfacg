@@ -2,8 +2,11 @@ var fs = require('fs'),
     request = require('request'), 
     cheerio = require('cheerio');
 
-var startPage = "http://comic.sfacg.com/Catalog/default.aspx?PageIndex=1";
-var Catalog = [], CatalogCount = 0;
+var domain = "http://comic.sfacg.com",
+    startPage = "http://comic.sfacg.com/Catalog/default.aspx?PageIndex=1";
+var Catalog = [], CatalogCount = 0,
+    Chapter = [], ChapterCount = 0,
+    Page    = [], PageCount    = 0;
 
 var getHTML = function (url, callback) {
     request(url, function (error, response, body) {
@@ -22,7 +25,7 @@ function start (url) {
         var $ = cheerio.load(html); 
         nextPage = $('li.pagebarNext a').attr('href');
 
-        $('.Comic_Pic_List li').not('.Conjunction').each(function(i, element){
+        $('.Comic_Pic_List li:nth-child(2)').each(function(i, element){
             var regex = /^[\w\W]+\/HTML\/(\w+)\/$/;
             var result = $(this).children('strong').children('a').attr('href').match(regex);
             if (result == null) {
@@ -63,17 +66,83 @@ function start (url) {
             Catalog[CatalogCount] = metadata;
             CatalogCount++;
 
+            comicChapter(ID, url);
             //console.log(metadata);
-        });    
+        }); 
+        /*   
         if (nextPage != null)   start(nextPage);
         else {
             //console.log(Catalog);
             //console.log(Catalog.length);
-            fs.writeFile('test.json', JSON.stringify(Catalog, null, 4), function(err) {
+            fs.writeFile('catalog.json', JSON.stringify(Catalog, null, 4), function(err) {
                 if (err) throw err;
             });
-        }   
+        } 
+        */  
+    });
+}
+
+function comicChapter (catalogID, url) {
+
+    getHTML(url, function (html) {
+        var $ = cheerio.load(html); 
+
+        $('ul.serialise_list li a').each(function(i, element) {
+            var title = $(this).text();
+            if (title == null)  title = $(this).children('font').text();
+            var ID = catalogID + title;
+            var PageUrl = $(this).attr('href');
+
+            var metadata = {
+                catalog: catalogID,
+                ID: ID,
+                title: title,
+            };
+            Chapter[ChapterCount] = metadata;
+            ChapterCount++;
+
+            comicPage(ID, PageUrl);
+        });
+        /*
+        fs.writeFile('chapter.json', JSON.stringify(Chapter, null, 4), function(err) {
+            if (err) throw err;
+        });
+        */
+    });
+}
+
+function comicPage (chapterID, url) {
+
+    getHTML(url, function (html) {
+        
+        var $ = cheerio.load(html); 
+
+        var jsUrl = domain + $('script')[1].attribs['src'];
+
+        getHTML(jsUrl, function (html) {
+            var regex = /\/Pic\/[\w|\/]+\.\w+/g;
+            var result = html.match(regex);
+            var count = 1;
+
+            for (var i = 0; i < result.length; i++) {
+                var ID = chapterID + "_" + count.toString();
+                var url = domain + result[i];
+
+                var metadata = {
+                    chapter: chapterID,
+                    ID: ID,
+                    url: url,
+                };
+                Page[PageCount] = metadata;
+                PageCount++;
+                count++;
+            };
+            console.log(result);
+        
+        });
+        
     });
 }
 
 start(startPage);
+
