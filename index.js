@@ -66,8 +66,10 @@ function start (url) {
             Catalog[CatalogCount] = metadata;
             CatalogCount++;
 
+            console.log("comicChapter start ");
             comicChapter(ID, url);
             //console.log(metadata);
+            console.log("comicChapter end ");
         }); 
         /*   
         if (nextPage != null)   start(nextPage);
@@ -91,7 +93,7 @@ function comicChapter (catalogID, url) {
             var title = $(this).text();
             if (title == null)  title = $(this).children('font').text();
             var ID = catalogID + title;
-            var PageUrl = $(this).attr('href');
+            var PageUrl = domain + $(this).attr('href');
 
             var metadata = {
                 catalog: catalogID,
@@ -101,13 +103,15 @@ function comicChapter (catalogID, url) {
             Chapter[ChapterCount] = metadata;
             ChapterCount++;
 
+            console.log("comicPage start ");
             comicPage(ID, PageUrl);
+            console.log("comicPage end ");
         });
-        /*
+        
         fs.writeFile('chapter.json', JSON.stringify(Chapter, null, 4), function(err) {
             if (err) throw err;
         });
-        */
+        
     });
 }
 
@@ -137,7 +141,9 @@ function comicPage (chapterID, url) {
                 PageCount++;
                 count++;
             };
-            console.log(result);
+            fs.writeFile('page.json', JSON.stringify(Page, null, 4), function(err) {
+                if (err) throw err;
+            });
         
         });
         
