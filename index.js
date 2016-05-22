@@ -1,12 +1,11 @@
 var fs = require('fs'),
     request = require('request'), 
-    cheerio = require('cheerio');
+    cheerio = require('cheerio'),
+    async = require('async');
 
 var domain = "http://comic.sfacg.com",
-    startPage = "http://comic.sfacg.com/Catalog/default.aspx?PageIndex=1";
-var Catalog = [], CatalogCount = 0,
-    Chapter = [], ChapterCount = 0,
-    Page    = [], PageCount    = 0;
+    startPage = "http://comic.sfacg.com/Catalog/default.aspx?PageIndex=1",
+    parseURL = "http://vivalalova.tk:4000/parse/classes/";
 
 var getHTML = function (url, callback) {
     request(url, function (error, response, body) {
@@ -16,10 +15,30 @@ var getHTML = function (url, callback) {
     })
 }
 
+var postParse = function (url, postData, callback) {
+    request({ 
+        uri: url,
+        method: "POST",
+        headers: {
+            "X-Parse-Application-Id": "myAppId",
+            "Content-Type": "application/json"
+        },
+        json: true,
+        body: postData
+    }, function (error, response, body) {
+        if (!error && response.statusCode == 201) {
+            return callback(body) // return the HTML
+        }
+        else
+            console.log("error: " + error)
+            console.log("response.statusCode: " + response.statusCode)
+            console.log("response.statusText: " + response.statusText)
+    });
+}
+
 function start (url) {
 
     var nextPage;
-
     getHTML(url, function (html) {
         //console.log(html);
         var $ = cheerio.load(html); 
@@ -63,24 +82,24 @@ function start (url) {
                 url: url,
                 thumbnailurl: thumbnailurl,
             };
-            Catalog[CatalogCount] = metadata;
-            CatalogCount++;
-
-            console.log("comicChapter start ");
-            comicChapter(ID, url);
-            //console.log(metadata);
-            console.log("comicChapter end ");
-        }); 
-        /*   
-        if (nextPage != null)   start(nextPage);
-        else {
-            //console.log(Catalog);
-            //console.log(Catalog.length);
-            fs.writeFile('catalog.json', JSON.stringify(Catalog, null, 4), function(err) {
-                if (err) throw err;
-            });
-        } 
-        */  
+            // Catalog.push(metadata);
+            q.push({name:'postParse', url: 'Catalog', run: function(cb) {
+                postParse(parseURL + "Catalog", metadata, function(result) {
+                    // console.log("POST Catalog success, ID: " + result.objectId);
+                });
+            }});
+            q.concurrency++;
+            q.push({name:'comicChapter', url: url, run: function(cb) {
+                comicChapter(ID, url);
+            }});
+            q.concurrency++;
+        });
+        if (nextPage) {
+            q.push({name:'start', url: nextPage, run: function(cb){
+                start(nextPage);
+            }});
+            q.concurrency++;
+        }
     });
 }
 
@@ -100,17 +119,31 @@ function comicChapter (catalogID, url) {
                 ID: ID,
                 title: title,
             };
-            Chapter[ChapterCount] = metadata;
-            ChapterCount++;
+            // Chapter.push(metadata);
 
-            console.log("comicPage start ");
-            comicPage(ID, PageUrl);
-            console.log("comicPage end ");
+            // if (i == $('ul.serialise_list li a').length - 1) {
+            //     // console.log(JSON.stringify(catalog, null, 4));
+            //     fs.writeFile(catalog.title + '.json', JSON.stringify(catalog, null, 4), function(err) {
+            //         if (err) throw err;
+            //     });
+            // }
+            //comicPage(ID, PageUrl);
+
+            q.push({name:'postParse', url: 'Chapter', run: function(cb) {
+                postParse(parseURL + "Chapter", metadata, function(result) {
+                    // console.log("POST Chapter success, ID: " + result.objectId);
+                });
+            }});
+            q.concurrency++;
+            q.push({name:'comicPage', url: PageUrl, run: function(cb) {
+                comicPage(ID, PageUrl);
+            }});
+            q.concurrency++;
         });
         
-        fs.writeFile('chapter.json', JSON.stringify(Chapter, null, 4), function(err) {
-            if (err) throw err;
-        });
+        // fs.writeFile('chapter.json', JSON.stringify(Chapter, null, 4), function(err) {
+        //     if (err) throw err;
+        // });
         
     });
 }
@@ -120,35 +153,54 @@ function comicPage (chapterID, url) {
     getHTML(url, function (html) {
         
         var $ = cheerio.load(html); 
-
-        var jsUrl = domain + $('script')[1].attribs['src'];
-
-        getHTML(jsUrl, function (html) {
-            var regex = /\/Pic\/[\w|\/]+\.\w+/g;
-            var result = html.match(regex);
-            var count = 1;
-
-            for (var i = 0; i < result.length; i++) {
-                var ID = chapterID + "_" + count.toString();
-                var url = domain + result[i];
-
-                var metadata = {
-                    chapter: chapterID,
-                    ID: ID,
-                    url: url,
-                };
-                Page[PageCount] = metadata;
-                PageCount++;
-                count++;
-            };
-            fs.writeFile('page.json', JSON.stringify(Page, null, 4), function(err) {
-                if (err) throw err;
-            });
         
-        });
+        try {
+            var jsUrl = domain + $('script')[1].attribs.src;
+
+            getHTML(jsUrl, function (html) {
+                var regex = /\/Pic\/[\w|\/]+\.\w+/g;
+                var result = html.match(regex);
+                var count = 1;
+
+                try {
+                    for (var i = 0; i < result.length; i++) {
+                        var ID = chapterID + "_" + count.toString();
+                        var url = domain + result[i];
+
+                        var metadata = {
+                            chapter: chapterID,
+                            ID: ID,
+                            url: url,
+                        };
+                        // Page.push(metadata);
+                        q.push({name:'postParse', url: 'Page', run: function(cb) {
+                            postParse(parseURL + "Page", metadata, function(result) {
+                                // console.log("POST Page success, ID: " + result.objectId);
+                            });
+                        }});
+                        q.concurrency++;
+                        count++;
+                    };
+                }
+                catch (err) {
+                    console.log('err page jsUrl: ', jsUrl);
+                }
+                
+            });
+        }
+        catch (err) {
+            console.log('err page url: ', url);
+        }
         
     });
 }
 
-start(startPage);
+var q = async.queue(function(task, callback) {
+    // console.log('func: ', task.name, ', url: ', task.url);
+    task.run(callback);
+}, 1, 1);
 
+q.push({ name:'start', url: startPage, run: function(cb) {
+    start(startPage);
+}});
+q.concurrency++;
