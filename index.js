@@ -82,23 +82,20 @@ function start (url) {
                 url: url,
                 thumbnailurl: thumbnailurl,
             };
-            // Catalog.push(metadata);
-            q.push({name:'postParse', url: 'Catalog', run: function(cb) {
+
+            cargo.push({name:'postParse', url: 'Catalog'}, function(err) {
                 postParse(parseURL + "Catalog", metadata, function(result) {
                     // console.log("POST Catalog success, ID: " + result.objectId);
                 });
-            }});
-            q.concurrency++;
-            q.push({name:'comicChapter', url: url, run: function(cb) {
-                comicChapter(ID, url);
-            }});
-            q.concurrency++;
+            });
+            cargo.push({name:'comicChapter', url: url}, function(err) {
+                setTimeout(function() { comicChapter(ID, url); }, 500);
+            });
         });
         if (nextPage) {
-            q.push({name:'start', url: nextPage, run: function(cb){
-                start(nextPage);
-            }});
-            q.concurrency++;
+            cargo.push({name:'start', url: nextPage}, function(err) {
+                setTimeout(function() { start(nextPage); }, 500);
+            });
         }
     });
 }
@@ -119,7 +116,6 @@ function comicChapter (catalogID, url) {
                 ID: ID,
                 title: title,
             };
-            // Chapter.push(metadata);
 
             // if (i == $('ul.serialise_list li a').length - 1) {
             //     // console.log(JSON.stringify(catalog, null, 4));
@@ -129,16 +125,14 @@ function comicChapter (catalogID, url) {
             // }
             //comicPage(ID, PageUrl);
 
-            q.push({name:'postParse', url: 'Chapter', run: function(cb) {
+            cargo.push({name:'postParse', url: 'Chapter'}, function(err) {
                 postParse(parseURL + "Chapter", metadata, function(result) {
                     // console.log("POST Chapter success, ID: " + result.objectId);
                 });
-            }});
-            q.concurrency++;
-            q.push({name:'comicPage', url: PageUrl, run: function(cb) {
-                comicPage(ID, PageUrl);
-            }});
-            q.concurrency++;
+            });
+            cargo.push({name:'comicPage', url: PageUrl}, function(err) {
+                setTimeout(function() { comicPage(ID, PageUrl); }, 500);
+            });
         });
         
         // fs.writeFile('chapter.json', JSON.stringify(Chapter, null, 4), function(err) {
@@ -160,11 +154,10 @@ function comicPage (chapterID, url) {
             getHTML(jsUrl, function (html) {
                 var regex = /\/Pic\/[\w|\/]+\.\w+/g;
                 var result = html.match(regex);
-                var count = 1;
 
                 try {
                     for (var i = 0; i < result.length; i++) {
-                        var ID = chapterID + "_" + count.toString();
+                        var ID = chapterID + "_" + (i+1).toString();
                         var url = domain + result[i];
 
                         var metadata = {
@@ -172,14 +165,12 @@ function comicPage (chapterID, url) {
                             ID: ID,
                             url: url,
                         };
-                        // Page.push(metadata);
-                        q.push({name:'postParse', url: 'Page', run: function(cb) {
+
+                        cargo.push({name:'postParse', url: 'Page'}, function(err) {
                             postParse(parseURL + "Page", metadata, function(result) {
                                 // console.log("POST Page success, ID: " + result.objectId);
                             });
-                        }});
-                        q.concurrency++;
-                        count++;
+                        });
                     };
                 }
                 catch (err) {
@@ -195,12 +186,13 @@ function comicPage (chapterID, url) {
     });
 }
 
-var q = async.queue(function(task, callback) {
-    // console.log('func: ', task.name, ', url: ', task.url);
-    task.run(callback);
-}, 1, 1);
+var cargo = async.cargo(function(tasks, callback) {
+    for(var i=0; i<tasks.length; i++){
+        console.log('func: ', tasks[i].name, 'url: ', tasks[i].url);
+    }
+    callback();
+}, 1);
 
-q.push({ name:'start', url: startPage, run: function(cb) {
+cargo.push({ name:'start', url: startPage}, function(err) {
     start(startPage);
-}});
-q.concurrency++;
+});
