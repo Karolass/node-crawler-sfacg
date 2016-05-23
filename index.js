@@ -102,7 +102,8 @@ function start (url) {
                 // postParse(parseURL + "Catalog", metadata, function(result) {
                 //     // console.log("POST Catalog success, ID: " + result.objectId);
                 // });
-                parse.post('Catalog', metadata);
+                // parse.post('Catalog', metadata);
+                timeDelay(function() { parse.post('Catalog', metadata); });
             });
             cargo.push({name:'comicChapter', url: url}, function(err) {
                 timeDelay(function() { comicChapter(ID, url); });
@@ -134,10 +135,8 @@ function comicChapter (catalogID, url) {
             };
 
             cargo.push({name:'postParse', url: 'Chapter'}, function(err) {
-                // postParse(parseURL + "Chapter", metadata, function(result) {
-                //     // console.log("POST Chapter success, ID: " + result.objectId);
-                // });
-                parse.post('Chapter', metadata);
+                // parse.post('Chapter', metadata);
+                timeDelay(function() { parse.post('Chapter', metadata); });
             });
             cargo.push({name:'comicPage', url: PageUrl}, function(err) {
                 timeDelay(function() { comicPage(ID, PageUrl); });
@@ -176,10 +175,8 @@ function comicPage (chapterID, url) {
                         };
 
                         cargo.push({name:'postParse', url: 'Page'}, function(err) {
-                            // postParse(parseURL + "Page", metadata, function(result) {
-                            //     // console.log("POST Page success, ID: " + result.objectId);
-                            // });
-                            parse.post('Page', metadata);
+                            // parse.post('Page', metadata);
+                            timeDelay(function() { parse.post('Page', metadata); });
                         });
                     };
                 }
