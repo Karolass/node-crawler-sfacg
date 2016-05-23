@@ -1,7 +1,8 @@
 var fs = require('fs'),
     request = require('request'), 
     cheerio = require('cheerio'),
-    async = require('async');
+    async = require('async'),
+    parse = require('./parse');
 
 var domain = "http://comic.sfacg.com",
     startPage = "http://comic.sfacg.com/Catalog/default.aspx?PageIndex=1",
@@ -33,6 +34,20 @@ var postParse = function (url, postData, callback) {
             console.log("error: " + error)
             console.log("response.statusCode: " + response.statusCode)
             console.log("response.statusText: " + response.statusText)
+    });
+}
+
+var timeDelay = function(cb) {
+    var max = 2, min = 0.5, ms = 1000;
+    var ran = Math.floor((Math.random()*(max-min)+min)*10)/10*ms;
+    setTimeout(function() {
+        cb();
+    }, ran);
+}
+
+var writeLog = function(src, text) {
+    fs.appendFile(src, text + "\n", function (err) {
+        if (err) throw err;
     });
 }
 
@@ -84,17 +99,18 @@ function start (url) {
             };
 
             cargo.push({name:'postParse', url: 'Catalog'}, function(err) {
-                postParse(parseURL + "Catalog", metadata, function(result) {
-                    // console.log("POST Catalog success, ID: " + result.objectId);
-                });
+                // postParse(parseURL + "Catalog", metadata, function(result) {
+                //     // console.log("POST Catalog success, ID: " + result.objectId);
+                // });
+                parse.post('Catalog', metadata);
             });
             cargo.push({name:'comicChapter', url: url}, function(err) {
-                setTimeout(function() { comicChapter(ID, url); }, 500);
+                timeDelay(function() { comicChapter(ID, url); });
             });
         });
         if (nextPage) {
             cargo.push({name:'start', url: nextPage}, function(err) {
-                setTimeout(function() { start(nextPage); }, 500);
+                timeDelay(function() { start(nextPage); });
             });
         }
     });
@@ -117,21 +133,14 @@ function comicChapter (catalogID, url) {
                 title: title,
             };
 
-            // if (i == $('ul.serialise_list li a').length - 1) {
-            //     // console.log(JSON.stringify(catalog, null, 4));
-            //     fs.writeFile(catalog.title + '.json', JSON.stringify(catalog, null, 4), function(err) {
-            //         if (err) throw err;
-            //     });
-            // }
-            //comicPage(ID, PageUrl);
-
             cargo.push({name:'postParse', url: 'Chapter'}, function(err) {
-                postParse(parseURL + "Chapter", metadata, function(result) {
-                    // console.log("POST Chapter success, ID: " + result.objectId);
-                });
+                // postParse(parseURL + "Chapter", metadata, function(result) {
+                //     // console.log("POST Chapter success, ID: " + result.objectId);
+                // });
+                parse.post('Chapter', metadata);
             });
             cargo.push({name:'comicPage', url: PageUrl}, function(err) {
-                setTimeout(function() { comicPage(ID, PageUrl); }, 500);
+                timeDelay(function() { comicPage(ID, PageUrl); });
             });
         });
         
@@ -167,29 +176,32 @@ function comicPage (chapterID, url) {
                         };
 
                         cargo.push({name:'postParse', url: 'Page'}, function(err) {
-                            postParse(parseURL + "Page", metadata, function(result) {
-                                // console.log("POST Page success, ID: " + result.objectId);
-                            });
+                            // postParse(parseURL + "Page", metadata, function(result) {
+                            //     // console.log("POST Page success, ID: " + result.objectId);
+                            // });
+                            parse.post('Page', metadata);
                         });
                     };
                 }
                 catch (err) {
-                    console.log('err page jsUrl: ', jsUrl);
+                    // console.log('err page jsUrl: ', jsUrl);
+                    writeLog('pagejs_err.log','err page jsUrl: ' + jsUrl);
                 }
                 
             });
         }
         catch (err) {
-            console.log('err page url: ', url);
+            // console.log('err page url: ', url);
+            writeLog('page_err.log','err page url: ' +  url);
         }
         
     });
 }
 
 var cargo = async.cargo(function(tasks, callback) {
-    for(var i=0; i<tasks.length; i++){
-        console.log('func: ', tasks[i].name, 'url: ', tasks[i].url);
-    }
+    // for(var i=0; i<tasks.length; i++){
+    //     console.log('func: ', tasks[i].name, 'url: ', tasks[i].url);
+    // }
     callback();
 }, 1);
 
