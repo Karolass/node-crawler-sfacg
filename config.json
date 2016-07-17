@@ -1,0 +1,18 @@
+{
+  "domain": "http://comic.sfacg.com",
+  "delay": {
+    "min": 0.5,
+    "max": 2.5
+  },
+  "webcache": {
+    "status": false,
+    "URL": "https://webcache.googleusercontent.com/search?q=cache:"
+  },
+  "Parse": {
+    "type": "lova",
+    "appId": "KDH83EpxyMPfPXNo22oKi62uXwCM33iaWF5WvOuB",
+    "jsId": "Xxr3IUG8rPVtAsPQjegGAySRDuOHbXmIMg9FUNza",
+    "serverId": "myAppId",
+    "serverURL": "http://vivalalova.tk:4000/parse"
+  }
+}
