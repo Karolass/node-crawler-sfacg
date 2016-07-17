@@ -9,10 +9,10 @@
     "URL": "https://webcache.googleusercontent.com/search?q=cache:"
   },
   "Parse": {
-    "type": "lova",
-    "appId": "KDH83EpxyMPfPXNo22oKi62uXwCM33iaWF5WvOuB",
-    "jsId": "Xxr3IUG8rPVtAsPQjegGAySRDuOHbXmIMg9FUNza",
+    "type": "server",
+    "appId": "",
+    "jsId": "",
     "serverId": "myAppId",
-    "serverURL": "http://vivalalova.tk:4000/parse"
+    "serverURL": "http://localhost:4000/parse"
   }
 }
